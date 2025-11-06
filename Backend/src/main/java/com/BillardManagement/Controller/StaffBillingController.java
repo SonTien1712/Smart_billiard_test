@@ -882,8 +882,11 @@
                         return table.add(product).subtract(discount);
                     })
                     .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-    
-            DashboardStatsDTO dto = new DashboardStatsDTO((int) count, revenue);
+
+            DashboardStatsDTO dto = DashboardStatsDTO.builder()
+                    .todayBills((int) count)
+                    .todayRevenue(revenue)
+                    .build();
             return ResponseEntity.ok(dto);
         }
     

@@ -12,7 +12,7 @@ public interface BilliardClubService {
     // Lấy theo ID
     Optional<Billardclub> getClubById(Integer id);
 
-    static List<Billardclub> getClubsByCustomerId(Integer customerId);
+    List<Billardclub> getClubsByCustomerId(Integer customerId);
 
     // Tạo mới
     Billardclub createClub(Billardclub club);

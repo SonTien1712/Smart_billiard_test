@@ -15,5 +15,5 @@ public interface BillardclubRepo extends JpaRepository<Billardclub, Integer> {
     // Có thể bổ sung các phương thức hợp lệ theo cột có thật, ví dụ:
     Optional<Billardclub> findByPhoneNumber(String phoneNumber);
 
-    Optional<Billardclub> findByClubID(Integer Id);
+
 }

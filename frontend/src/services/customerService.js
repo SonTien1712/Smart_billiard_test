@@ -364,6 +364,16 @@ export class CustomerService {
             throw error;
         }
     }
+    async getDashboardStats() {
+        try {
+            // Xóa /api/ ở đầu, vì apiClient đã có sẵn
+            const response = await apiClient.get('/customer/dashboard-stats');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+            throw error;
+        }
+    }
 
     async searchProducts(clubId, keyword) {
         try {

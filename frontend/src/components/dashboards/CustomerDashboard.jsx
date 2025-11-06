@@ -1,4 +1,4 @@
-import React, { useEffect, useState  } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Chart, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
@@ -6,51 +6,77 @@ import { PageType } from '../Dashboard';
 import { Building, Table, Users, Calendar, Package, DollarSign, TrendingUp, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from 'recharts';
 
+// *** THÊM DÒNG NÀY: Import service và Skeleton (để hiển thị loading) ***
+import { customerService } from '../../services/customerService';
+import { Skeleton } from '../ui/skeleton';
+// (Lưu ý: bạn có thể phải sửa đường dẫn import 'customerService' nếu nó nằm ở chỗ khác)
 
-import { useAuth } from '../AuthProvider';
+// Xóa import 'useAuth' vì nó không được dùng trong file này
+// import { useAuth } from '../AuthProvider';
 
 
 export function CustomerDashboard({ onPageChange }) {
 
-  // // Mock data
-  // const stats = {
-  //   totalRevenue: 15420,
-  //   totalTables: 12,
-  //   totalEmployees: 8,
-  //   activeShifts: 3,
-  //   totalProducts: 25,
-  //   monthlyGrowth: 8.2
-  // };
-  //
-  // const revenueData = [
-  //   { date: '2024-01-01', revenue: 1200 },
-  //   { date: '2024-01-02', revenue: 1400 },
-  //   { date: '2024-01-03', revenue: 1100 },
-  //   { date: '2024-01-04', revenue: 1600 },
-  //   { date: '2024-01-05', revenue: 1300 },
-  //   { date: '2024-01-06', revenue: 1800 },
-  //   { date: '2024-01-07', revenue: 1500 },
-  // ];
-  //
-  // const tableUsageData = [
-  //   { table: 'Table 1', hours: 8 },
-  //   { table: 'Table 2', hours: 6 },
-  //   { table: 'Table 3', hours: 9 },
-  //   { table: 'Table 4', hours: 7 },
-  //   { table: 'Table 5', hours: 5 },
-  // ];
+    // *** THÊM DÒNG NÀY: Khai báo state cho stats và loading ***
+    const [stats, setStats] = useState(null); // Khởi tạo là null
+    const [revenueData, setRevenueData] = useState([]); // Khởi tạo là mảng rỗng
+    const [tableUsageData, setTableUsageData] = useState([]); // Khởi tạo là mảng rỗng
+    const [isLoading, setIsLoading] = useState(true); // Thêm state loading
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 const data = await customerService.getDashboardStats();
                 setStats(data);
+
+                // Ghi chú: API backend của bạn có thể chưa trả về revenueData / tableUsageData
+                // setRevenueData(data.revenueData || []);
+                // setTableUsageData(data.tableUsageData || []);
+
             } catch (error) {
                 console.error('Failed to load dashboard:', error);
+            } finally {
+                // *** THÊM DÒNG NÀY: Dừng loading sau khi API chạy xong (kể cả khi lỗi) ***
+                setIsLoading(false);
             }
         };
         fetchStats();
     }, []);
+
+    // *** THÊM KHỐI NÀY: Kiểm tra loading trước khi render ***
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-3xl font-semibold">Club Dashboard</h1>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                    {/* Hiển thị Skeleton thay vì crash */}
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                </div>
+            </div>
+        );
+    }
+
+    // *** THÊM KHỐI NÀY: Kiểm tra nếu API lỗi và stats vẫn là null ***
+    if (!stats) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-3xl font-semibold">Club Dashboard</h1>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-destructive">Lỗi</CardTitle>
+                        <CardDescription>
+                            Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.
+                        </CardDescription>
+                    </CardHeader>
+                </Card>
+            </div>
+        );
+    }
 
   return (
     <div className="space-y-6">

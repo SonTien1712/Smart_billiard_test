@@ -30,6 +30,8 @@ public class CustomerServiceImpl implements CustomerService {
     @Autowired
     private CustomerRepo customerRepository;
     private BilliardClubRepo billRepo;
+    @Autowired
+    private BilliardClubService BilliardClubService;
     private BillRepo bills;
     private BilliardTableRepo tableRepo;
     private EmployeeRepo employeeRepo;
@@ -156,17 +158,18 @@ public class CustomerServiceImpl implements CustomerService {
 
         long totalTables = tableRepo.countByClubID_CustomerID(customerId);
         long totalEmployees = employeeRepo.countByClubID_CustomerID(customerId);
-        long activeShifts = EmployeeshiftRepo.countActiveShiftsByCustomer(customerId);
-        long totalProducts = ProductRepository.countActiveProductsByClubIds(clubIds);
+        long activeShiftsCount = activeShifts.countActiveShiftsByCustomer(customerId);
+        long totalProductCount = totalProducts.countActiveProductsByClubIds(clubIds);
 
 
         return DashboardStatsDTO.builder()
-                .totalRevenue(todayRevenue.doubleValue())
-                .totalTables(totalTables)
-                .totalEmployees(totalEmployees)
-                .activeShifts(activeShifts)
-                .totalProducts(totalProducts)
-                .monthlyGrowth(0.0) // calculate if needed
+                .todayRevenue(todayRevenue)
+                .totalTables((int) todayBills)
+                .totalTables((int) totalTables)
+                .totalEmployees((int) totalEmployees)
+                .activeShifts((int) activeShiftsCount)
+                .totalProducts((int) totalProductCount)
+                .monthlyGrowth(BigDecimal.valueOf(0.0))
                 .build();
     }
 }

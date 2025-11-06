@@ -17,7 +17,7 @@ public interface EmployeeshiftRepo extends JpaRepository<Employeeshift, Integer>
 
     List<Employeeshift> findByEmployeeID_IdAndShiftDateBetween(Integer employeeId, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT COUNT(s) FROM Employeeshift s WHERE s.customerID.id = :customerId AND s.Status = 'Active'")
-    static long countActiveShiftsByCustomer(@Param("customerId") Integer customerId);
+    @Query("SELECT COUNT(s) FROM Employeeshift s WHERE s.customerID.id = :customerId AND s.status = 'Active'")
+    long countActiveShiftsByCustomer(@Param("customerId") Integer customerId);
 }
 

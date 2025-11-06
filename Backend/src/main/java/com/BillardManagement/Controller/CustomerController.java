@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.BillardManagement.DTO.Response.DashboardStatsDTO;
+import com.BillardManagement.Entity.Customer;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -46,9 +50,25 @@ public class CustomerController {
         return ResponseEntity.ok(clubs);
     }
 
-    @GetMapping("/dashboard")
-    public ResponseEntity<DashboardStatsDTO> getDashboard() {
-        Customer user = customerService.getCurrentUser();
-        return ResponseEntity.ok(customerService.getDashboardStats(user.getId()));
+//    @GetMapping("/dashboard")
+//    public ResponseEntity<DashboardStatsDTO> getDashboard() {
+//        Customer user = customerService.getCurrentUser();
+//        return ResponseEntity.ok(customerService.getDashboardStats(user.getId()));
+//    }
+    @GetMapping("/dashboard-stats")
+    public ResponseEntity<DashboardStatsDTO> getDashboard(
+            @AuthenticationPrincipal Customer authenticatedCustomer
+    ) {
+        if (authenticatedCustomer == null) {
+            // Trường hợp này hiếm khi xảy ra nếu Spring Security được cấu hình đúng,
+            // nhưng vẫn nên kiểm tra
+            return ResponseEntity.status(401).build();
+        }
+
+        // Gọi service với ID của customer đang đăng nhập
+        Integer customerId = authenticatedCustomer.getId();
+        DashboardStatsDTO stats = customerService.getDashboardStats(customerId);
+
+        return ResponseEntity.ok(stats);
     }
 }
