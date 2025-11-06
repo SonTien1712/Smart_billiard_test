@@ -61,6 +61,10 @@ export function AuthProvider({ children }) {
       setLoading(true);
       const authResponse = await authService.login(credentials);
 
+        // --- ADD THIS LINE ---
+        console.log('Login response from server:', authResponse);
+        // ---------------------
+
       // lấy & lưu token (để isAuthenticated() hoạt động sau reload)
       const token = authResponse?.accessToken || '';
       localStorage.setItem('accessToken', token);

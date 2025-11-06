@@ -30,6 +30,10 @@ import { StaffAccountManagement } from '../components/customer/StaffAccountManag
 import { PromotionManagement } from '../components/customer/PromotionManagement.jsx';
 import { ProductManagement } from '../components/customer/ProductManagement.jsx';
 
+
+
+//
+
 // Staff Components
 import { BillManagement } from '../components/staff/BillManagement.jsx';
 import { WorkAndAttendance } from '../components/staff/WorkAndAttendance.jsx';
@@ -173,6 +177,7 @@ const routes = [
   },
 ];
 
+
 /**
  * Helper function to check if user has required role for a route
  * @param {string[]} roles - Required roles for the route
@@ -296,6 +301,22 @@ function ProtectedRoute({ route, children }) {
     return <Navigate to={redirectPath} replace />;
   }
 
+    // --- ADD THIS NEW SUBSCRIPTION LOGIC ---
+    if (user?.role === 'CUSTOMER') {
+        const active = isSubscriptionActive(user?.expiryDate);
+
+        // If user is INACTIVE and not on the premium page, force them there
+        if (!active && location.pathname !== '/premium') {
+            return <Navigate to="/premium" replace />;
+        }
+
+        // If user is ACTIVE and tries to go to the premium page, send to dashboard
+        if (active && location.pathname === '/premium') {
+            return <Navigate to="/dashboard/customer" replace />;
+        }
+    }
+    // --- END OF NEW LOGIC ---
+
   return (
     <Suspense fallback={<LoadingSpinner />}>
       {children}
@@ -312,30 +333,30 @@ function RouteRenderer() {
   return (
     <Routes>
       {routes.map((route, index) => {
-        if (user?.role === 'CUSTOMER') {
-          const active = isSubscriptionActive(user?.expiryDate);
-          console.log('Customer subscription check:', active, 'expiryDate:', user?.expiryDate);
-          if (!active) {
-            if (route.path !== '/premium') {
-              return (
-                <Route
-                  key={index}
-                  path={route.path}
-                  element={<Navigate to="/premium" replace />}
-                />
-              );
-            }
-          } else if (route.path === '/premium') {
-            console.log('Redirecting to /dashboard/customer');
-            return (
-              <Route
-                key={index}
-                path={route.path}
-                element={<Navigate to="/dashboard/customer" replace />}
-              />
-            );
-          }
-        }
+        // if (user?.role === 'CUSTOMER') {
+        //   const active = isSubscriptionActive(user?.expiryDate);
+        //   console.log('Customer subscription check:', active, 'expiryDate:', user?.expiryDate);
+        //   if (!active) {
+        //     if (route.path !== '/premium') {
+        //       return (
+        //         <Route
+        //           key={index}
+        //           path={route.path}
+        //           element={<Navigate to="/premium" replace />}
+        //         />
+        //       );
+        //     }
+        //   } else if (route.path === '/premium') {
+        //     console.log('Redirecting to /dashboard/customer');
+        //     return (
+        //       <Route
+        //         key={index}
+        //         path={route.path}
+        //         element={<Navigate to="/dashboard/customer" replace />}
+        //       />
+        //     );
+        //   }
+        // }
         // Handle redirect routes
         if (route.redirect) {
           const redirectPath = route.redirect(user);

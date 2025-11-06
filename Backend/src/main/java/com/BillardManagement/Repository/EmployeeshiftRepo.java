@@ -11,13 +11,21 @@ import java.util.List;
 
 @Repository
 public interface EmployeeshiftRepo extends JpaRepository<Employeeshift, Integer> {
-
-
     List<Employeeshift> findByEmployeeID_Id(Integer employeeId);
 
-    List<Employeeshift> findByEmployeeID_IdAndShiftDateBetween(Integer employeeId, LocalDate startDate, LocalDate endDate);
+    List<Employeeshift> findByEmployeeID_IdAndShiftDateBetween(
+            Integer employeeId,
+            LocalDate startDate,
+            LocalDate endDate
+    );
 
-    @Query("SELECT COUNT(s) FROM Employeeshift s WHERE s.customerID.id = :customerId AND s.status = 'Active'")
-    long countActiveShiftsByCustomer(@Param("customerId") Integer customerId);
+    /**
+     * Đếm số ca đang hoạt động (đã check-in nhưng chưa check-out)
+     * Thông qua club để filter theo customer
+     */
+    @Query("SELECT COUNT(s) FROM Employeeshift s " +
+            "WHERE s.clubID.customerID = :customerId " +
+            "AND s.actualStartTime IS NOT NULL " +
+            "AND s.actualEndTime IS NULL")
+    Long countActiveShiftsByCustomerId(@Param("customerId") Integer customerId);
 }
-

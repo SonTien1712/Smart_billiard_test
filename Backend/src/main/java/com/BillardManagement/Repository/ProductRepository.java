@@ -12,8 +12,6 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
-
-
     List<Product> findByClubIdAndIsActiveTrue(Integer clubId);
 
     List<Product> findByClubId(Integer clubId);
@@ -30,7 +28,12 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("SELECT p FROM Product p WHERE p.id = :id AND p.club.id = :clubId")
     Optional<Product> findByIdAndClubId(@Param("id") Integer id, @Param("clubId") Integer clubId);
 
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.club.id IN :clubIds AND p.isActive = true")
-    Long countActiveProductsByClubIds(@Param("clubIds") List<Integer> clubIds);
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.club.id = :clubId AND p.isActive = true")
+    Long countActiveProductsByClubId(@Param("clubId") Integer clubId);
 
+    /**
+     * Đếm số sản phẩm thuộc customer (qua club)
+     */
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.clubID.customerID = :customerId")
+    Long countByCustomerId(@Param("customerId") Integer customerId);
 }

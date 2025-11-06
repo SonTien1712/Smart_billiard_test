@@ -2,27 +2,22 @@ package com.BillardManagement.Service.Impl;
 
 import com.BillardManagement.DTO.Request.UpdateCustomerRequest;
 import com.BillardManagement.DTO.Response.DashboardStatsDTO;
-import com.BillardManagement.Entity.Billardclub;
 import com.BillardManagement.Entity.Customer;
 import com.BillardManagement.Exception.ResourceNotFoundException;
 import com.BillardManagement.Repository.*;
-import com.BillardManagement.Service.BilliardClubService;
 import com.BillardManagement.Service.CustomerService;
-import com.BillardManagement.Service.EmployeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.YearMonth;
+import java.time.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.time.ZoneId;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -31,17 +26,19 @@ public class CustomerServiceImpl implements CustomerService {
     private CustomerRepo customerRepository;
 
     @Autowired
-    private BilliardClubService BilliardClubService;
+    private BillRepo billRepo;
+
     @Autowired
-    private BillRepo bills;
-    @Autowired
-    private BilliardTableRepo tableRepo;
+    private BilliardTableRepo billiardTableRepo;
+
     @Autowired
     private EmployeeRepo employeeRepo;
+
     @Autowired
-    private EmployeeshiftRepo activeShifts;
+    private ProductRepository productRepo;
+
     @Autowired
-    private ProductRepository totalProducts;
+    private EmployeeshiftRepo employeeshiftRepo;
 
     @Override
     public List<Customer> getAllCustomers() {
@@ -74,25 +71,41 @@ public class CustomerServiceImpl implements CustomerService {
         return true;
     }
 
-    @Override public long countAll() { return customerRepository.count(); }
-    @Override public long countActive() { return customerRepository.countByIsActiveTrue(); }
-    @Override public long countNewInMonth(YearMonth ym) {
+    @Override
+    public long countAll() {
+        return customerRepository.count();
+    }
+
+    @Override
+    public long countActive() {
+        return customerRepository.countByIsActiveTrue();
+    }
+
+    @Override
+    public long countNewInMonth(YearMonth ym) {
         var zone = ZoneId.systemDefault();
         var start = ym.atDay(1).atStartOfDay(zone).toInstant();
-        var end   = ym.atEndOfMonth().atTime(23,59,59).atZone(zone).toInstant();
+        var end = ym.atEndOfMonth().atTime(23, 59, 59).atZone(zone).toInstant();
         return customerRepository.countByDateJoinedBetween(start, end);
     }
+
     @Override
     public long countJoinedBetween(Instant from, Instant to) {
         return customerRepository.countByDateJoinedBetween(from, to);
     }
-    @Override public double growthRateInMonth(YearMonth ym) {
+
+    @Override
+    public double growthRateInMonth(YearMonth ym) {
         var prev = ym.minusMonths(1);
         long cur = countNewInMonth(ym);
         long pre = countNewInMonth(prev);
         return pre == 0 ? (cur > 0 ? 100.0 : 0.0) : ((cur - pre) * 100.0 / pre);
     }
-    @Override public Page<Customer> findAll(Pageable pageable) { return customerRepository.findAll(pageable); }
+
+    @Override
+    public Page<Customer> findAll(Pageable pageable) {
+        return customerRepository.findAll(pageable);
+    }
 
     @Override
     public Optional<Customer> updateStatus(Integer id, boolean isActive) {
@@ -105,9 +118,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Optional<Customer> updateCustomer(Integer id, UpdateCustomerRequest req) {
         return customerRepository.findById(id).map(c -> {
-            if (req.getName()    != null) c.setCustomerName(req.getName().trim());
-            if (req.getEmail()   != null) c.setEmail(req.getEmail().trim());
-            if (req.getPhone()   != null) c.setPhoneNumber(req.getPhone().trim());
+            if (req.getName() != null) c.setCustomerName(req.getName().trim());
+            if (req.getEmail() != null) c.setEmail(req.getEmail().trim());
+            if (req.getPhone() != null) c.setPhoneNumber(req.getPhone().trim());
             if (req.getAddress() != null) c.setAddress(req.getAddress().trim());
             return customerRepository.save(c);
         });
@@ -115,12 +128,15 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public void updateExpireDate(Integer id, String planId) {
-        Customer customer = customerRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-        int monthsToAdd = planId.equals("1") ? 3 : 12;  // Gói 1: 3 tháng, Gói 2: 12 tháng
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+        int monthsToAdd = planId.equals("1") ? 3 : 12;
         LocalDate currentExpire = customer.getExpiryDate();
         LocalDate newExpire = (currentExpire != null && currentExpire.isAfter(LocalDate.now()))
                 ? currentExpire.plusMonths(monthsToAdd)
                 : LocalDate.now().plusMonths(monthsToAdd);
+
         customer.setExpiryDate(newExpire);
         customerRepository.save(customer);
     }
@@ -141,41 +157,124 @@ public class CustomerServiceImpl implements CustomerService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    /**
+     * Lấy thống kê dashboard cho customer
+     * Dữ liệu được tổng hợp từ TẤT CẢ các clubs thuộc customer này
+     */
     @Override
+    @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats(Integer customerId) {
-//        var clubs = customerRepository.findByCustomerID(customerId);
-////        List<Billardclub> club = billRepo.findAll();
-//        var clubIds = clubs.stream().map(Billardclub::getId).toList();
-        List<Billardclub> clubs = BilliardClubService.getClubsByCustomerId(customerId);
-        List<Integer> clubIds = clubs.stream().map(Billardclub::getId).toList();
+        // 1. Đảm bảo customer tồn tại
+        if (!customerRepository.existsById(customerId)) {
+            throw new ResourceNotFoundException("Customer not found with id: " + customerId);
+        }
 
+        // 2. Tính toán các chỉ số tổng quan
 
-        var today = LocalDate.now();
-        var startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        var endOfDay = today.atTime(23,59,59).atZone(ZoneId.systemDefault()).toInstant();
+        // Tổng doanh thu (từ tất cả clubs của customer)
+        Double totalRevenue = billRepo.findTotalRevenueByCustomerId(customerId);
 
-        // Get today's bills
-//        var bills = billRepo.findByBillStatusIgnoreCaseAndEndTimeBetween("PAID", startOfDay, endOfDay);
-//        long todayBills = bills.countByClubIds(clubIds);
-//        BigDecimal todayRevenue = bills.sumTotalAmountByClubIds(clubIds);
-        String paidStatus = "PAID";
-        long todayBills = bills.countByClubIDInAndBillStatusIgnoreCaseAndEndTimeBetween(clubIds, paidStatus, startOfDay, endOfDay);
-        BigDecimal todayRevenue = bills.sumTotalAmountByClubIdInAndBillStatusIgnoreCaseAndEndTimeBetween(clubIds, paidStatus, startOfDay, endOfDay);
+        // Tổng số bàn (từ tất cả clubs)
+        Long totalTables = billiardTableRepo.countByCustomerId(customerId);
 
-        long totalTables = tableRepo.countByClubID_CustomerID(customerId);
-        long totalEmployees = employeeRepo.countByClubID_CustomerID(customerId);
-        long activeShiftsCount = activeShifts.countActiveShiftsByCustomer(customerId);
-        long totalProductCount = totalProducts.countActiveProductsByClubIds(clubIds);
+        // Tổng số nhân viên
+        Long totalEmployees = employeeRepo.countByCustomerId(customerId);
 
+        // Tổng số sản phẩm
+        Long totalProducts = productRepo.countByCustomerId(customerId);
 
+        // Số ca đang hoạt động (có actualStartTime nhưng chưa có actualEndTime)
+        Long activeShifts = employeeshiftRepo.countActiveShiftsByCustomerId(customerId);
+
+        // Tăng trưởng doanh thu theo tháng
+        Double monthlyGrowth = calculateMonthlyGrowth(customerId);
+
+        // 3. Lấy dữ liệu biểu đồ doanh thu (7 ngày gần nhất)
+        LocalDateTime sevenDaysAgo = LocalDate.now().minusDays(6).atStartOfDay();
+        List<DashboardStatsDTO.RevenueData> revenueData =
+                billRepo.findDailyRevenueByCustomerId(customerId, sevenDaysAgo);
+
+        // Điền đủ 7 ngày nếu có ngày không có dữ liệu
+        revenueData = fillMissingDates(revenueData, 7);
+
+        // 4. Lấy dữ liệu sử dụng bàn (hôm nay)
+        LocalDateTime today = LocalDate.now().atStartOfDay();
+        List<DashboardStatsDTO.TableUsageData> tableUsageData =
+                billRepo.findTodayTableUsageByCustomerId(customerId, today);
+
+        // Giới hạn top 5 bàn được sử dụng nhiều nhất
+        if (tableUsageData.size() > 5) {
+            tableUsageData = tableUsageData.subList(0, 5);
+        }
+
+        // 5. Xây dựng DTO trả về
         return DashboardStatsDTO.builder()
-                .todayRevenue(todayRevenue)
-                .todayBills((int) todayBills)
-                .totalTables((int) totalTables)
-                .totalEmployees((int) totalEmployees)
-                .activeShifts((int) activeShiftsCount)
-                .totalProducts((int) totalProductCount)
-                .monthlyGrowth(BigDecimal.valueOf(0.0))
+                .totalRevenue(totalRevenue != null ? totalRevenue : 0.0)
+                .totalTables(totalTables != null ? totalTables : 0L)
+                .totalEmployees(totalEmployees != null ? totalEmployees : 0L)
+                .totalProducts(totalProducts != null ? totalProducts : 0L)
+                .activeShifts(activeShifts != null ? activeShifts : 0L)
+                .monthlyGrowth(monthlyGrowth)
+                .revenueData(revenueData)
+                .tableUsageData(tableUsageData)
                 .build();
+    }
+
+    /**
+     * Tính toán % tăng trưởng doanh thu so với tháng trước
+     */
+    private Double calculateMonthlyGrowth(Integer customerId) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfThisMonth = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime startOfLastMonth = startOfThisMonth.minusMonths(1);
+        LocalDateTime endOfLastMonth = startOfThisMonth;
+
+        // Doanh thu tháng này (từ đầu tháng đến hiện tại)
+        Double revenueThisMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
+                customerId, startOfThisMonth, LocalDateTime.now());
+
+        // Doanh thu tháng trước (trọn vẹn)
+        Double revenueLastMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
+                customerId, startOfLastMonth, endOfLastMonth);
+
+        double thisMonth = (revenueThisMonth != null) ? revenueThisMonth : 0.0;
+        double lastMonth = (revenueLastMonth != null) ? revenueLastMonth : 0.0;
+
+        if (lastMonth == 0.0) {
+            return (thisMonth > 0.0) ? 100.0 : 0.0;
+        }
+
+        double growth = ((thisMonth - lastMonth) / lastMonth) * 100.0;
+        return Math.round(growth * 100.0) / 100.0;
+    }
+
+    /**
+     * Điền đủ các ngày thiếu trong dữ liệu doanh thu
+     */
+    private List<DashboardStatsDTO.RevenueData> fillMissingDates(
+            List<DashboardStatsDTO.RevenueData> data, int days) {
+
+        List<DashboardStatsDTO.RevenueData> result = new ArrayList<>();
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(days - 1);
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            String dateStr = date.toString();
+
+            // Tìm dữ liệu cho ngày này
+            DashboardStatsDTO.RevenueData found = data.stream()
+                    .filter(d -> d.getDate().equals(dateStr))
+                    .findFirst()
+                    .orElse(null);
+
+            if (found != null) {
+                result.add(found);
+            } else {
+                // Thêm ngày với revenue = 0
+                result.add(new DashboardStatsDTO.RevenueData(dateStr, 0.0));
+            }
+        }
+
+        return result;
     }
 }
