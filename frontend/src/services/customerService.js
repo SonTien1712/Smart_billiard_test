@@ -366,8 +366,8 @@ export class CustomerService {
     }
     async getDashboardStats() {
         try {
-            // Xóa /api/ ở đầu, vì apiClient đã có sẵn
-            const response = await apiClient.get('/customer/dashboard-stats');
+            // Sửa lại đường dẫn: bỏ '/api' và dùng 'customers' (số nhiều)
+            const response = await apiClient.get('/customers/dashboard-stats');
             return response.data;
         } catch (error) {
             console.error('Error fetching dashboard stats:', error);

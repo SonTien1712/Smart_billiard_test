@@ -164,7 +164,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         return DashboardStatsDTO.builder()
                 .todayRevenue(todayRevenue)
-                .totalTables((int) todayBills)
+                .todayBills((int) todayBills)
                 .totalTables((int) totalTables)
                 .totalEmployees((int) totalEmployees)
                 .activeShifts((int) activeShiftsCount)
