@@ -83,4 +83,6 @@ public class Bill {
     @Column(name = "CreatedDate")
     private Instant createdDate;
 
+    private BigDecimal total_amount;
+
 }

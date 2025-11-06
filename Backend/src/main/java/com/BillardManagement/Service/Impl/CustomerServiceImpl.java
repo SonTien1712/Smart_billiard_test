@@ -29,13 +29,18 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Autowired
     private CustomerRepo customerRepository;
-    private BilliardClubRepo billRepo;
+
     @Autowired
     private BilliardClubService BilliardClubService;
+    @Autowired
     private BillRepo bills;
+    @Autowired
     private BilliardTableRepo tableRepo;
+    @Autowired
     private EmployeeRepo employeeRepo;
+    @Autowired
     private EmployeeshiftRepo activeShifts;
+    @Autowired
     private ProductRepository totalProducts;
 
     @Override
@@ -153,8 +158,9 @@ public class CustomerServiceImpl implements CustomerService {
 //        var bills = billRepo.findByBillStatusIgnoreCaseAndEndTimeBetween("PAID", startOfDay, endOfDay);
 //        long todayBills = bills.countByClubIds(clubIds);
 //        BigDecimal todayRevenue = bills.sumTotalAmountByClubIds(clubIds);
-        long todayBills = bills.countByClubIds(clubIds, startOfDay, endOfDay);
-        BigDecimal todayRevenue = bills.sumTotalAmountByClubIds(clubIds, startOfDay, endOfDay);
+        String paidStatus = "PAID";
+        long todayBills = bills.countByClubIDInAndBillStatusIgnoreCaseAndEndTimeBetween(clubIds, paidStatus, startOfDay, endOfDay);
+        BigDecimal todayRevenue = bills.sumTotalAmountByClubIdInAndBillStatusIgnoreCaseAndEndTimeBetween(clubIds, paidStatus, startOfDay, endOfDay);
 
         long totalTables = tableRepo.countByClubID_CustomerID(customerId);
         long totalEmployees = employeeRepo.countByClubID_CustomerID(customerId);

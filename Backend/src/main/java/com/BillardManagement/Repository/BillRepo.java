@@ -52,14 +52,13 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     @Query("select b from Bill b left join fetch b.tableID where b.id = :id")
     Optional<Bill> findViewById(@Param("id") Integer id);
 
-    @Query("SELECT COUNT(b) FROM Bill b WHERE b.clubID.id IN :clubIds AND b.billStatus = 'PAID' AND b.endTime BETWEEN :start AND :end")
-    long countByClubIds(@Param("clubIds") List<Integer> clubIds,
-                        @Param("start") Instant start,
-                        @Param("end") Instant end);
+    long countByClubIDInAndBillStatusIgnoreCaseAndEndTimeBetween(List<Integer> clubIds, String billStatus, Instant start, Instant end);
 
-    @Query("SELECT COALESCE(SUM(b.finalAmount), 0) FROM Bill b WHERE b.clubID.id IN :clubIds AND b.billStatus = 'PAID' AND b.endTime BETWEEN :start AND :end")
-    BigDecimal sumTotalAmountByClubIds(@Param("clubIds") List<Integer> clubIds,
-                                       @Param("start") Instant start,
-                                       @Param("end") Instant end);
-
+    @Query("SELECT SUM(b.total_amount) FROM Bill b WHERE b.clubID.id IN :clubIds AND b.billStatus = :billStatus AND b.endTime BETWEEN :start AND :end")
+    BigDecimal sumTotalAmountByClubIdInAndBillStatusIgnoreCaseAndEndTimeBetween(
+            @Param("clubIds") List<Integer> clubIds,
+            @Param("billStatus") String billStatus,
+            @Param("start") Instant start,
+            @Param("end") Instant end
+    );
 }
