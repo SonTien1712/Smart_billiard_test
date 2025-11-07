@@ -45,7 +45,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     Optional<Bill> findViewById(@Param("id") Integer id);
 
     // ==================== DASHBOARD QUERIES (Dành cho Customer) ====================
-
+    // (Các truy vấn này đã đúng)
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid'")
@@ -95,13 +95,13 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
 
-    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - ĐÃ SỬA LỖI ====================
+    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - SỬA LỖI TẠI ĐÂY ====================
 
     /**
      * ✅ SỬA LỖI:
-     * 1. b.totalAmount -> b.finalAmount
-     * 2. b.billDate -> b.endTime (Giả định tính doanh thu khi kết thúc)
-     * 3. b.status -> b.billStatus
+     * 1. b.totalAmount -> b.finalAmount (Trường đúng trong Bill.java)
+     * 2. b.billDate -> b.endTime (Thời gian thanh toán hợp lý hơn)
+     * 3. b.status -> b.billStatus (Trường đúng trong Bill.java)
      */
     @Query("SELECT COALESCE(SUM(b.finalAmount), 0.0) FROM Bill b " +
             "WHERE b.endTime BETWEEN :startDate AND :endDate " +
@@ -111,9 +111,9 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("endDate") LocalDateTime endDate);
 
     /**
-     * ✅ SỬA LỖI:
-     * 1. b.totalAmount -> b.finalAmount
-     * 2. b.billDate -> b.endTime
+     * ✅ SỬA LỖI: (Sửa tương tự như trên để tránh lỗi tiếp theo)
+     * 1. b.billDate -> b.endTime
+     * 2. b.totalAmount -> b.finalAmount
      * 3. b.status -> b.billStatus
      */
     @Query("SELECT " +
@@ -126,7 +126,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI (Đã sửa từ lần trước):
+     * ✅ SỬA LỖI: (Sửa tương tự như trên để tránh lỗi tiếp theo)
      * 1. b.billiardtable -> b.tableID
      * 2. b.billDate -> b.endTime
      */
@@ -135,7 +135,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             "SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime)) / 3600.0) AS hours " +
             "FROM Bill b " +
             "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
-            "AND b.endTime BETWEEN :startDate AND :endDate " +
+            "AND b.endTime BETWEEN :startDate AND :endDate " + // Đã đổi billDate -> endTime
             "GROUP BY b.tableID.tableName")
     List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(
             @Param("startDate") LocalDateTime startDate,
