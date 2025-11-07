@@ -17,7 +17,7 @@ import java.util.Optional;
 @Repository
 public interface BillRepo extends JpaRepository<Bill, Integer> {
 
-    // Existing methods...
+    // ... (Các phương thức cũ của bạn không đổi) ...
     List<Bill> findTop10ByOrderByCreatedDateDesc();
     List<Bill> findTop10ByBillStatusIgnoreCaseOrderByCreatedDateDesc(String billStatus);
     List<Bill> findTop10ByClubID_IdAndBillStatusIgnoreCaseOrderByCreatedDateDesc(Integer clubId, String billStatus);
@@ -44,19 +44,13 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     @Query("select b from Bill b left join fetch b.tableID where b.id = :id")
     Optional<Bill> findViewById(@Param("id") Integer id);
 
-    // ==================== DASHBOARD QUERIES ====================
+    // ==================== DASHBOARD QUERIES (Dành cho Customer) ====================
 
-    /**
-     * Tổng doanh thu của customer (từ tất cả clubs)
-     */
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid'")
     Double findTotalRevenueByCustomerId(@Param("customerId") Integer customerId);
 
-    /**
-     * Doanh thu trong khoảng thời gian
-     */
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid' " +
@@ -67,10 +61,6 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Doanh thu theo ngày (7 ngày gần nhất)
-     * (Cú pháp Projection đã sửa từ lần trước)
-     */
     @Query("SELECT " +
             "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " +
             "COALESCE(SUM(b.finalAmount), 0) AS revenue " +
@@ -84,10 +74,6 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("startDate") LocalDateTime startDate);
 
-    /**
-     * Số giờ sử dụng của từng bàn trong ngày hôm nay
-     * (Cú pháp Projection đã sửa từ lần trước)
-     */
     @Query("SELECT " +
             "t.tableName AS table, " +
             "COALESCE(SUM(b.totalHours), 0.0) AS hours " +
@@ -102,9 +88,6 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
 
-    /**
-     * Đếm số bill trong ngày
-     */
     @Query("SELECT COUNT(b) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.startTime >= :today")
@@ -112,16 +95,11 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
 
-    /**
-     * Tính tổng doanh thu của các hóa đơn ĐÃ THANH TOÁN trong một khoảng thời gian.
-     */
+    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) ====================
+
     @Query("SELECT COALESCE(SUM(b.totalAmount), 0.0) FROM Bill b WHERE b.billDate BETWEEN :startDate AND :endDate AND b.status = 'PAID'")
     Double findTotalRevenueBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Lấy dữ liệu doanh thu hàng ngày (cho biểu đồ) kể từ một ngày nhất định.
-     * (Cú pháp Projection đã sửa từ lần trước)
-     */
     @Query("SELECT " +
             "FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') AS date, " +
             "SUM(b.totalAmount) AS revenue " +
@@ -131,8 +109,8 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI LOGIC: Thay thế 'b.billiardtable' bằng 'b.tableID'
-     * Lấy tổng số giờ chơi (dạng thập phân) theo từng bàn trong một khoảng thời gian.
+     * ✅ ĐÂY LÀ NƠI SỬA LỖI:
+     * Thay thế 'b.billiardtable' (sai) bằng 'b.tableID' (đúng)
      */
     @Query("SELECT " +
             "b.tableID.tableName AS table, " + // ✅ SỬA LỖI
