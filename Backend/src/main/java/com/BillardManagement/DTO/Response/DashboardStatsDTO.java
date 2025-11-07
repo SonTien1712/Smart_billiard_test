@@ -1,12 +1,7 @@
 package com.BillardManagement.DTO.Response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -24,29 +19,26 @@ public class DashboardStatsDTO {
     private Long totalProducts;
     private Double monthlyGrowth;
 
-    // Dữ liệu biểu đồ doanh thu 7 ngày
+    // Dữ liệu biểu đồ
     private List<RevenueData> revenueData;
-
-    // Dữ liệu biểu đồ sử dụng bàn
     private List<TableUsageData> tableUsageData;
 
-    // DTO cho dữ liệu doanh thu theo ngày
+    // ✅ CRITICAL: Must be STATIC for JPA constructor expressions
     @Getter
     @Setter
     @AllArgsConstructor
     @NoArgsConstructor
     public static class RevenueData {
-        private String date;  // Format: yyyy-MM-dd
+        private String date;
         private Double revenue;
     }
 
-    // DTO cho dữ liệu sử dụng bàn
     @Getter
     @Setter
     @AllArgsConstructor
     @NoArgsConstructor
     public static class TableUsageData {
-        private String table;  // Tên bàn
-        private Double hours;  // Số giờ sử dụng
+        private String table;
+        private Double hours;
     }
 }
