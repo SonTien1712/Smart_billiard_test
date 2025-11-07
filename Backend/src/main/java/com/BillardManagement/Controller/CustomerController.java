@@ -48,9 +48,11 @@ public class CustomerController {
      */
     @GetMapping("/{id}/clubs")
     public ResponseEntity<?> getClubsByCustomer(@PathVariable Integer id) {
+        // ✅ SỬA LỖI 4: Phải gọi qua instance 'billiardClubService'
         List<Billardclub> clubs = billiardClubService.getClubsByCustomerId(id);
         return ResponseEntity.ok(clubs);
     }
+
 
     /**
      * Lấy thống kê dashboard của customer đang đăng nhập

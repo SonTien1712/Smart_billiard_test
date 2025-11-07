@@ -6,22 +6,16 @@ import java.util.Optional;
 
 public interface BilliardClubService {
 
-    // Lấy tất cả câu lạc bộ
     List<Billardclub> getAllClubs();
 
-    // Lấy theo ID
     Optional<Billardclub> getClubById(Integer id);
 
+    // ✅ SỬA LỖI 2: Đảm bảo phương thức là abstract (không có body, không static)
     List<Billardclub> getClubsByCustomerId(Integer customerId);
 
-    // Tạo mới
     Billardclub createClub(Billardclub club);
 
-    // Cập nhật
     Billardclub updateClub(Integer id, Billardclub updated);
 
-    // Xóa (xóa cứng khỏi DB)
     void deleteClub(Integer id);
-
-
 }

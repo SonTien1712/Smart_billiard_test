@@ -27,11 +27,12 @@ public class BilliardClubController {
     public Optional<Billardclub> getClubById(@PathVariable Integer id) {
         return clubService.getClubById(id);
     }
+
     @GetMapping("/customer/{customerId}")
     public List<Billardclub> getClubsByCustomer(@PathVariable Integer customerId) {
+        // ✅ SỬA LỖI 3: Phải gọi qua instance 'clubService', không gọi qua Interface 'BilliardClubService'
         return clubService.getClubsByCustomerId(customerId);
     }
-
     // ✅ Tạo mới club
     @PostMapping
     public Billardclub createClub(@RequestBody Billardclub club) {

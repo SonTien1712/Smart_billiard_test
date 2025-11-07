@@ -15,9 +15,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal; // ✅ SỬA LỖI NGẦM: Import BigDecimal
+import java.math.BigDecimal;
 import java.time.*;
-import java.time.temporal.TemporalAdjusters; // ✅ SỬA LỖI 3: Thêm import
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,12 +38,12 @@ public class CustomerServiceImpl implements CustomerService {
     private EmployeeRepo employeeRepo;
 
     @Autowired
-    private ProductRepository productRepo; // Tên biến này là 'productRepo'
+    private ProductRepository productRepo;
 
     @Autowired
     private EmployeeshiftRepo employeeshiftRepo;
 
-    // ... (Các phương thức từ getAllCustomers đến getCurrentUser không đổi) ...
+    // ... (Tất cả các phương thức từ getAllCustomers đến getCurrentUser không đổi) ...
 
     @Override
     public List<Customer> getAllCustomers() {
@@ -162,48 +162,29 @@ public class CustomerServiceImpl implements CustomerService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    /**
-     * ✅ SỬA LỖI 1: Triển khai phương thức này (đã bị thiếu)
-     * Đây là logic chính để lấy DTO, sử dụng các truy vấn (queries) CỤ THỂ của customer
-     */
     @Override
-    @Transactional(readOnly = true) // Tối ưu hóa cho việc đọc
+    @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats(Integer customerId) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
         LocalDateTime startOfSevenDaysAgo = startOfToday.minusDays(7);
 
-        // === 1. Lấy dữ liệu KPI từ các Repo (cho customerId) ===
-
-        // (Lưu ý: Các repo này cần có phương thức đếm theo customerId)
-        // Giả sử các Repo đã có phương thức countByCustomerId
         Long totalTables = billiardTableRepo.countByClubCustomerID(customerId);
         Long totalEmployees = employeeRepo.countByClubCustomerID(customerId);
-
-        // ✅ SỬA LỖI 2: Sửa 'productRepository' thành 'productRepo'
         Long totalProducts = productRepo.countByCustomerId(customerId);
-
-        // Giả sử active shifts là của customer
         Long activeShifts = employeeshiftRepo.countActiveShiftsByCustomerId(customerId);
 
-        // === 2. Lấy dữ liệu Bill (cho customerId) ===
-
-        // Doanh thu và số bill hôm nay
         Double todayRevenueDouble = billRepo.findTotalRevenueByCustomerIdAndDateRange(customerId, startOfToday, now);
         BigDecimal todayRevenue = (todayRevenueDouble != null) ? BigDecimal.valueOf(todayRevenueDouble) : BigDecimal.ZERO;
         Long todayBills = billRepo.countTodayBillsByCustomerId(customerId, startOfToday);
 
-        // === 3. Tăng trưởng hàng tháng (cho customerId) ===
         Double monthlyGrowth = calculateMonthlyGrowth(customerId);
 
-        // === 4. Dữ liệu biểu đồ (cho customerId) ===
         List<DashboardStatsDTO.RevenueData> rawRevenueData = billRepo.findDailyRevenueByCustomerId(customerId, startOfSevenDaysAgo);
-        // Điền 7 ngày
         List<DashboardStatsDTO.RevenueData> revenueData = fillMissingDates(rawRevenueData, 7);
 
         List<DashboardStatsDTO.TableUsageData> tableUsageData = billRepo.findTodayTableUsageByCustomerId(customerId, startOfToday);
 
-        // === 5. Xây dựng DTO trả về ===
         return DashboardStatsDTO.builder()
                 .todayRevenue(todayRevenue)
                 .todayBills(todayBills)
@@ -217,36 +198,25 @@ public class CustomerServiceImpl implements CustomerService {
                 .build();
     }
 
-    /**
-     * Phương thức này (không tham số) sẽ lấy customer hiện tại và gọi phương thức (có tham số) ở trên
-     */
     @Override
     public DashboardStatsDTO getDashboardStats() {
-        // Lấy customer hiện tại từ Spring Security
         Customer currentUser = getCurrentUser();
         if (currentUser == null) {
             throw new ResourceNotFoundException("Customer not authenticated or not found");
         }
-        // Gọi logic chính
         return getDashboardStats(currentUser.getId());
     }
 
-
-    /**
-     * Tính toán % tăng trưởng doanh thu so với tháng trước (cho customerId)
-     */
     private Double calculateMonthlyGrowth(Integer customerId) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfThisMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
         LocalDateTime startOfLastMonth = startOfThisMonth.minusMonths(1);
 
-        // Doanh thu tháng này (từ đầu tháng đến hiện tại)
         Double revenueThisMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
                 customerId, startOfThisMonth, now);
 
-        // Doanh thu tháng trước (trọn vẹn)
         Double revenueLastMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
-                customerId, startOfLastMonth, startOfThisMonth); // (từ đầu tháng trước ĐẾN đầu tháng này)
+                customerId, startOfLastMonth, startOfThisMonth);
 
         double thisMonth = (revenueThisMonth != null) ? revenueThisMonth : 0.0;
         double lastMonth = (revenueLastMonth != null) ? revenueLastMonth : 0.0;
@@ -256,23 +226,19 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         double growth = ((thisMonth - lastMonth) / lastMonth) * 100.0;
-        return Math.round(growth * 100.0) / 100.0; // Làm tròn 2 chữ số
+        return Math.round(growth * 100.0) / 100.0;
     }
 
-    /**
-     * Điền đủ các ngày thiếu trong dữ liệu doanh thu
-     */
     private List<DashboardStatsDTO.RevenueData> fillMissingDates(
             List<DashboardStatsDTO.RevenueData> data, int days) {
 
         List<DashboardStatsDTO.RevenueData> result = new ArrayList<>();
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1); // Lấy đủ 'days' ngày
+        LocalDate startDate = endDate.minusDays(days - 1);
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            String dateStr = date.toString(); // Định dạng 'YYYY-MM-DD'
+            String dateStr = date.toString();
 
-            // Tìm dữ liệu cho ngày này (phải khớp định dạng YYYY-MM-DD)
             DashboardStatsDTO.RevenueData found = data.stream()
                     .filter(d -> d.getDate().equals(dateStr))
                     .findFirst()
@@ -281,8 +247,7 @@ public class CustomerServiceImpl implements CustomerService {
             if (found != null) {
                 result.add(found);
             } else {
-                // ✅ SỬA LỖI 5 (Logic): Khởi tạo class, không phải interface
-                // Dùng BigDecimal.ZERO thay vì 0.0
+                // ✅ SỬA LỖI 7: Phải dùng BigDecimal.ZERO vì RevenueData.revenue là BigDecimal
                 result.add(new DashboardStatsDTO.RevenueData(dateStr, BigDecimal.ZERO));
             }
         }

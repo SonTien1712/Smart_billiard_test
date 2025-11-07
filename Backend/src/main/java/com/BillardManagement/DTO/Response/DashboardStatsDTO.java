@@ -1,8 +1,6 @@
-// Tệp: Backend/src/main/java/com/BillardManagement/DTO/Response/DashboardStatsDTO.java
 package com.BillardManagement.DTO.Response;
 
-import lombok.*; // Import thêm Builder
-
+import lombok.*;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -10,7 +8,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder // ✅ SỬA LỖI 4: Thêm @Builder
+@Builder // ✅ SỬA LỖI 6: Thêm @Builder
 public class DashboardStatsDTO {
 
     // Các chỉ số KPI Cards
@@ -27,8 +25,7 @@ public class DashboardStatsDTO {
     private List<TableUsageData> tableUsageData;
 
     /**
-     * ✅ SỬA LỖI 5: Chuyển từ 'interface' thành 'static class'
-     * Phải là class tĩnh để JPA constructor (new) trong BillRepo hoạt động
+     * ✅ SỬA LỖI 7: Phải là 'static class' (lớp tĩnh), không phải 'interface'
      */
     @Getter
     @Setter
@@ -36,11 +33,11 @@ public class DashboardStatsDTO {
     @NoArgsConstructor
     public static class RevenueData {
         private String date;
-        private BigDecimal revenue; // Giữ BigDecimal để khớp với truy vấn Repo
+        private BigDecimal revenue;
     }
 
     /**
-     * ✅ SỬA LỖI 5: Chuyển từ 'interface' thành 'static class'
+     * ✅ SỬA LỖI 7: Phải là 'static class' (lớp tĩnh), không phải 'interface'
      */
     @Getter
     @Setter

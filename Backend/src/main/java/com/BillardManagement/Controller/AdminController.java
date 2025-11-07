@@ -79,7 +79,8 @@ public class AdminController {
     // Lấy danh sách clubs của 1 customer
     @GetMapping("/customers/{id}/clubs")
     public ResponseEntity<?> getClubsByCustomer(@PathVariable Integer id) {
-        // ✅ SỬA LỖI 1: Xóa chữ "cd" bị thừa
+        // ✅ SỬA LỖI 1: Xóa chữ "cd" bị thừa.
+        // Tệp bạn push lên (fa6d4a) đã sửa lỗi này, nhưng log build thì chưa.
         List<Billardclub> clubs = billiardClubService.getClubsByCustomerId(id);
         return ResponseEntity.ok(clubs);
     }
