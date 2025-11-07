@@ -45,7 +45,8 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     Optional<Bill> findViewById(@Param("id") Integer id);
 
     // ==================== DASHBOARD QUERIES (Dành cho Customer) ====================
-    // (Các truy vấn này đã đúng)
+    // (Các truy vấn này đã đúng từ lần trước)
+
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid'")
@@ -95,7 +96,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
 
-    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - SỬA LỖI TẠI ĐÂY ====================
+    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - ĐÃ SỬA LỖI ====================
 
     /**
      * ✅ SỬA LỖI:
@@ -126,7 +127,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI: (Sửa tương tự như trên để tránh lỗi tiếp theo)
+     * ✅ SỬA LỖI: (Đã sửa từ lần trước + Sửa thêm)
      * 1. b.billiardtable -> b.tableID
      * 2. b.billDate -> b.endTime
      */
