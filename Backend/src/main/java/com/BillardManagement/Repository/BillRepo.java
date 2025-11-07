@@ -46,6 +46,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
 
     // ==================== DASHBOARD QUERIES (Dành cho Customer) ====================
     // (Các truy vấn này đã đúng)
+
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid'")
@@ -60,6 +61,15 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    // ✅ SỬA LỖI 5: Thêm phương thức này để DashboardService (tệp cũ) có thể biên dịch
+    @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
+            "WHERE b.clubID.customerID = :customerId " +
+            "AND b.billStatus = 'Paid' " +
+            "AND b.endTime >= :today")
+    Double findTodayRevenueByCustomerId(
+            @Param("customerId") Integer customerId,
+            @Param("today") LocalDateTime today);
 
     @Query("SELECT " +
             "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " +
@@ -113,13 +123,8 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             "ORDER BY FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') ASC")
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
-    /**
-     * ✅ SỬA LỖI LOGIC: Thêm CAST(... AS double) để Hibernate hiểu kiểu dữ liệu
-     * Lấy tổng số giờ chơi (dạng thập phân) theo từng bàn trong một khoảng thời gian.
-     */
     @Query("SELECT " +
             "b.tableID.tableName AS table, " +
-            // Thêm CAST( ... AS double) để chỉ định kiểu dữ liệu cho phép chia
             "CAST(SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime))) AS double) / 3600.0 AS hours " +
             "FROM Bill b " +
             "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +

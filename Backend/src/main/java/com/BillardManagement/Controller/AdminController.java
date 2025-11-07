@@ -36,10 +36,10 @@ public class AdminController {
 
     @GetMapping("/statistics")
     public Map<String, Object> getStatistics(
-    @RequestParam(required = false)
-    @DateTimeFormat(iso = ISO.DATE_TIME) Instant from,
-    @RequestParam(required = false)
-    @DateTimeFormat(iso = ISO.DATE_TIME) Instant to
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = ISO.DATE_TIME) Instant to
     )   {
         var ym = YearMonth.now();
         long newCustomers = (from != null && to != null)
@@ -49,7 +49,7 @@ public class AdminController {
                 "totalCustomers", customerService.countAll(),
                 "activeCustomers", customerService.countActive(),
                 // FE cần một con số, không phải List
-                    "totalAdmins", adminService.getAllActiveAdmins().size(),
+                "totalAdmins", adminService.getAllActiveAdmins().size(),
                 "newCustomersThisMonth", newCustomers,
                 "growthRate", customerService.growthRateInMonth(ym)
         );
@@ -79,6 +79,7 @@ public class AdminController {
     // Lấy danh sách clubs của 1 customer
     @GetMapping("/customers/{id}/clubs")
     public ResponseEntity<?> getClubsByCustomer(@PathVariable Integer id) {
+        // ✅ SỬA LỖI 1: Xóa chữ "cd" bị thừa
         List<Billardclub> clubs = billiardClubService.getClubsByCustomerId(id);
         return ResponseEntity.ok(clubs);
     }
