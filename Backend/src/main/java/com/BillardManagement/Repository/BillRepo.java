@@ -45,8 +45,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     Optional<Bill> findViewById(@Param("id") Integer id);
 
     // ==================== DASHBOARD QUERIES (Dành cho Customer) ====================
-    // (Các truy vấn này đã đúng từ lần trước)
-
+    // (Các truy vấn này đã đúng)
     @Query("SELECT SUM(b.finalAmount) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid'")
@@ -98,12 +97,6 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
 
     // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - ĐÃ SỬA LỖI ====================
 
-    /**
-     * ✅ SỬA LỖI:
-     * 1. b.totalAmount -> b.finalAmount (Trường đúng trong Bill.java)
-     * 2. b.billDate -> b.endTime (Thời gian thanh toán hợp lý hơn)
-     * 3. b.status -> b.billStatus (Trường đúng trong Bill.java)
-     */
     @Query("SELECT COALESCE(SUM(b.finalAmount), 0.0) FROM Bill b " +
             "WHERE b.endTime BETWEEN :startDate AND :endDate " +
             "AND b.billStatus = 'Paid'")
@@ -111,12 +104,6 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * ✅ SỬA LỖI: (Sửa tương tự như trên để tránh lỗi tiếp theo)
-     * 1. b.billDate -> b.endTime
-     * 2. b.totalAmount -> b.finalAmount
-     * 3. b.status -> b.billStatus
-     */
     @Query("SELECT " +
             "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " +
             "SUM(b.finalAmount) AS revenue " +
@@ -127,16 +114,15 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI: (Đã sửa từ lần trước + Sửa thêm)
-     * 1. b.billiardtable -> b.tableID
-     * 2. b.billDate -> b.endTime
+     * ✅ SỬA LỖI LOGIC: Thêm CAST(... AS double) để Hibernate hiểu kiểu dữ liệu
+     * Lấy tổng số giờ chơi (dạng thập phân) theo từng bàn trong một khoảng thời gian.
      */
     @Query("SELECT " +
             "b.tableID.tableName AS table, " +
-            "SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime)) / 3600.0) AS hours " +
+            "CAST(SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime))) AS double) / 3600.0 AS hours " + // ✅ SỬA LỖI
             "FROM Bill b " +
             "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
-            "AND b.endTime BETWEEN :startDate AND :endDate " + // Đã đổi billDate -> endTime
+            "AND b.endTime BETWEEN :startDate AND :endDate " +
             "GROUP BY b.tableID.tableName")
     List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(
             @Param("startDate") LocalDateTime startDate,
