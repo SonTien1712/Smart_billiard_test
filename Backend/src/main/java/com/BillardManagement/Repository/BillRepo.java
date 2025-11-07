@@ -17,7 +17,7 @@ import java.util.Optional;
 @Repository
 public interface BillRepo extends JpaRepository<Bill, Integer> {
 
-    // ... (Các phương thức cũ của bạn từ dòng 19-48 không đổi) ...
+    // Existing methods...
     List<Bill> findTop10ByOrderByCreatedDateDesc();
     List<Bill> findTop10ByBillStatusIgnoreCaseOrderByCreatedDateDesc(String billStatus);
     List<Bill> findTop10ByClubID_IdAndBillStatusIgnoreCaseOrderByCreatedDateDesc(Integer clubId, String billStatus);
@@ -68,12 +68,12 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("endDate") LocalDateTime endDate);
 
     /**
-     * ✅ SỬA LỖI: Chuyển từ "new..." sang Projection (dùng AS)
      * Doanh thu theo ngày (7 ngày gần nhất)
+     * (Cú pháp Projection đã sửa từ lần trước)
      */
     @Query("SELECT " +
-            "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " + // Alias 'date' khớp với getDate()
-            "COALESCE(SUM(b.finalAmount), 0) AS revenue " + // Alias 'revenue' khớp với getRevenue()
+            "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " +
+            "COALESCE(SUM(b.finalAmount), 0) AS revenue " +
             "FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
             "AND b.billStatus = 'Paid' " +
@@ -85,16 +85,16 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI: Chuyển từ "new..." sang Projection (dùng AS)
      * Số giờ sử dụng của từng bàn trong ngày hôm nay
+     * (Cú pháp Projection đã sửa từ lần trước)
      */
     @Query("SELECT " +
-            "t.tableName AS table, " + // Alias 'table' khớp với getTable()
-            "COALESCE(SUM(b.totalHours), 0.0) AS hours " + // Alias 'hours' khớp với getHours()
+            "t.tableName AS table, " +
+            "COALESCE(SUM(b.totalHours), 0.0) AS hours " +
             "FROM Bill b " +
             "JOIN b.tableID t " +
             "WHERE b.clubID.customerID = :customerId " +
-            "AND b.endTime >= :today " + // Sửa logic: Lấy các bill KẾT THÚC trong hôm nay
+            "AND b.endTime >= :today " +
             "AND b.billStatus IN ('Paid', 'Unpaid') " +
             "GROUP BY t.id, t.tableName " +
             "ORDER BY SUM(b.totalHours) DESC")
@@ -107,7 +107,7 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
      */
     @Query("SELECT COUNT(b) FROM Bill b " +
             "WHERE b.clubID.customerID = :customerId " +
-            "AND b.startTime >= :today") // Logic cũ: Lấy các bill BẮT ĐẦU trong hôm nay
+            "AND b.startTime >= :today")
     Long countTodayBillsByCustomerId(
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
@@ -119,8 +119,8 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     Double findTotalRevenueBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
     /**
-     * ✅ SỬA LỖI: Chuyển từ "new..." sang Projection (dùng AS)
      * Lấy dữ liệu doanh thu hàng ngày (cho biểu đồ) kể từ một ngày nhất định.
+     * (Cú pháp Projection đã sửa từ lần trước)
      */
     @Query("SELECT " +
             "FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') AS date, " +
@@ -131,16 +131,16 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ SỬA LỖI: Chuyển từ "new..." sang Projection (dùng AS)
+     * ✅ SỬA LỖI LOGIC: Thay thế 'b.billiardtable' bằng 'b.tableID'
      * Lấy tổng số giờ chơi (dạng thập phân) theo từng bàn trong một khoảng thời gian.
      */
     @Query("SELECT " +
-            "b.billiardtable.tableName AS table, " +
+            "b.tableID.tableName AS table, " + // ✅ SỬA LỖI
             "SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime)) / 3600.0) AS hours " +
             "FROM Bill b " +
-            "WHERE b.billiardtable IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
+            "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " + // ✅ SỬA LỖI
             "AND b.billDate BETWEEN :startDate AND :endDate " +
-            "GROUP BY b.billiardtable.tableName")
+            "GROUP BY b.tableID.tableName") // ✅ SỬA LỖI
     List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
 }
