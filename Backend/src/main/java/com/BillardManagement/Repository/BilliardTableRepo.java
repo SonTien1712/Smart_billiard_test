@@ -65,4 +65,7 @@ public interface BilliardTableRepo extends JpaRepository<Billiardtable, Integer>
      */
     @Query("SELECT COUNT(t) FROM Billiardtable t WHERE t.clubID.customerID = :customerId")
     Long countByCustomerId(@Param("customerId") Integer customerId);
+
+    @Query("SELECT COUNT(t) FROM Billiardtable t WHERE t.club.customerID = :customerId")
+    Long countByClubCustomerID(@Param("customerId") Integer customerId);
 }

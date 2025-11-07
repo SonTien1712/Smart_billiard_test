@@ -23,11 +23,14 @@ public interface EmployeeshiftRepo extends JpaRepository<Employeeshift, Integer>
      * Đếm số ca đang hoạt động (đã check-in nhưng chưa check-out)
      * Thông qua club để filter theo customer
      */
-    @Query("SELECT COUNT(s) FROM Employeeshift s " +
-            "WHERE s.clubID.customerID = :customerId " +
-            "AND s.actualStartTime IS NOT NULL " +
-            "AND s.actualEndTime IS NULL")
-    Long countActiveShiftsByCustomerId(@Param("customerId") Integer customerId);
+//    @Query("SELECT COUNT(s) FROM Employeeshift s " +
+//            "WHERE s.clubID.customerID = :customerId " +
+//            "AND s.actualStartTime IS NOT NULL " +
+//            "AND s.actualEndTime IS NULL")
+//    Long countActiveShiftsByCustomerId(@Param("customerId") Integer customerId);
 
     Long countByCheckOutTimeIsNull();
+
+    @Query("SELECT COUNT(s) FROM Employeeshift s WHERE s.employee.club.customerID = :customerId AND s.checkOutTime IS NULL")
+    Long countActiveShiftsByCustomerId(@Param("customerId") Integer customerId);
 }

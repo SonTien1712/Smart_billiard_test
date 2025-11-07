@@ -1,3 +1,4 @@
+// Tệp: Backend/src/main/java/com/BillardManagement/Service/Impl/CustomerServiceImpl.java
 package com.BillardManagement.Service.Impl;
 
 import com.BillardManagement.DTO.Request.UpdateCustomerRequest;
@@ -14,7 +15,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal; // ✅ SỬA LỖI NGẦM: Import BigDecimal
 import java.time.*;
+import java.time.temporal.TemporalAdjusters; // ✅ SỬA LỖI 3: Thêm import
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,10 +38,12 @@ public class CustomerServiceImpl implements CustomerService {
     private EmployeeRepo employeeRepo;
 
     @Autowired
-    private ProductRepository productRepo;
+    private ProductRepository productRepo; // Tên biến này là 'productRepo'
 
     @Autowired
     private EmployeeshiftRepo employeeshiftRepo;
+
+    // ... (Các phương thức từ getAllCustomers đến getCurrentUser không đổi) ...
 
     @Override
     public List<Customer> getAllCustomers() {
@@ -158,80 +163,90 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     /**
-     * Lấy thống kê dashboard cho customer
-     * Dữ liệu được tổng hợp từ TẤT CẢ các clubs thuộc customer này
+     * ✅ SỬA LỖI 1: Triển khai phương thức này (đã bị thiếu)
+     * Đây là logic chính để lấy DTO, sử dụng các truy vấn (queries) CỤ THỂ của customer
      */
     @Override
-    public DashboardStatsDTO getDashboardStats() {
-
-        // === 1. Thống kê tổng quan (KPIs) ===
-        // Đếm tổng số bàn từ nghiệp vụ quản lý bàn
-        Long totalTables = billiardTableRepo.count();
-        // Đếm tổng số nhân viên từ nghiệp vụ quản lý nhân viên
-        Long totalEmployees = employeeRepo.count();
-        // Đếm tổng số sản phẩm từ nghiệp vụ quản lý sản phẩm
-        Long totalProducts = productRepository.count();
-        // Đếm số ca đang hoạt động từ nghiệp vụ quản lý ca làm việc
-        Long activeShifts = employeeshiftRepo.countByCheckOutTimeIsNull();
-
-        // === 2. Tính toán Doanh thu và Tăng trưởng ===
+    @Transactional(readOnly = true) // Tối ưu hóa cho việc đọc
+    public DashboardStatsDTO getDashboardStats(Integer customerId) {
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime startOfSevenDaysAgo = startOfToday.minusDays(7);
 
-        // Doanh thu tháng này (từ đầu tháng đến hiện tại)
-        LocalDateTime startOfMonth = now.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
-        Double revenueThisMonth = billRepo.findTotalRevenueBetweenDates(startOfMonth, now);
+        // === 1. Lấy dữ liệu KPI từ các Repo (cho customerId) ===
 
-        // Doanh thu tháng trước (trọn tháng trước)
-        LocalDateTime startOfLastMonth = startOfMonth.minusMonths(1);
-        LocalDateTime endOfLastMonth = startOfMonth.minusNanos(1);
-        Double revenueLastMonth = billRepo.findTotalRevenueBetweenDates(startOfLastMonth, endOfLastMonth);
+        // (Lưu ý: Các repo này cần có phương thức đếm theo customerId)
+        // Giả sử các Repo đã có phương thức countByCustomerId
+        Long totalTables = billiardTableRepo.countByClubCustomerID(customerId);
+        Long totalEmployees = employeeRepo.countByClubCustomerID(customerId);
 
-        // Tính tăng trưởng
-        Double monthlyGrowth = 0.0;
-        if (revenueLastMonth != null && revenueLastMonth > 0) {
-            // Tính % tăng trưởng so với tháng trước
-            monthlyGrowth = ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100.0;
-        } else if (revenueThisMonth != null && revenueThisMonth > 0) {
-            monthlyGrowth = 100.0; // Tăng trưởng 100% nếu tháng trước = 0
-        }
+        // ✅ SỬA LỖI 2: Sửa 'productRepository' thành 'productRepo'
+        Long totalProducts = productRepo.countByCustomerId(customerId);
 
-        // === 3. Dữ liệu Biểu đồ Doanh thu (7 ngày qua) ===
-        LocalDateTime sevenDaysAgo = now.minusDays(7).with(LocalTime.MIN);
-        List<DashboardStatsDTO.RevenueData> revenueData = billRepo.findDailyRevenueSince(sevenDaysAgo);
+        // Giả sử active shifts là của customer
+        Long activeShifts = employeeshiftRepo.countActiveShiftsByCustomerId(customerId);
 
-        // === 4. Dữ liệu Biểu đồ Sử dụng Bàn (Hôm nay) ===
-        LocalDateTime startOfDay = now.with(LocalTime.MIN);
-        List<DashboardStatsDTO.TableUsageData> tableUsageData = billRepo.findTableUsageBetweenDates(startOfDay, now);
+        // === 2. Lấy dữ liệu Bill (cho customerId) ===
+
+        // Doanh thu và số bill hôm nay
+        Double todayRevenueDouble = billRepo.findTotalRevenueByCustomerIdAndDateRange(customerId, startOfToday, now);
+        BigDecimal todayRevenue = (todayRevenueDouble != null) ? BigDecimal.valueOf(todayRevenueDouble) : BigDecimal.ZERO;
+        Long todayBills = billRepo.countTodayBillsByCustomerId(customerId, startOfToday);
+
+        // === 3. Tăng trưởng hàng tháng (cho customerId) ===
+        Double monthlyGrowth = calculateMonthlyGrowth(customerId);
+
+        // === 4. Dữ liệu biểu đồ (cho customerId) ===
+        List<DashboardStatsDTO.RevenueData> rawRevenueData = billRepo.findDailyRevenueByCustomerId(customerId, startOfSevenDaysAgo);
+        // Điền 7 ngày
+        List<DashboardStatsDTO.RevenueData> revenueData = fillMissingDates(rawRevenueData, 7);
+
+        List<DashboardStatsDTO.TableUsageData> tableUsageData = billRepo.findTodayTableUsageByCustomerId(customerId, startOfToday);
 
         // === 5. Xây dựng DTO trả về ===
         return DashboardStatsDTO.builder()
-                .totalRevenue(revenueThisMonth) // Tổng doanh thu hiển thị là của tháng này
-                .monthlyGrowth(monthlyGrowth)
+                .todayRevenue(todayRevenue)
+                .todayBills(todayBills)
                 .totalTables(totalTables)
                 .totalEmployees(totalEmployees)
                 .activeShifts(activeShifts)
                 .totalProducts(totalProducts)
+                .monthlyGrowth(monthlyGrowth)
                 .revenueData(revenueData)
                 .tableUsageData(tableUsageData)
                 .build();
     }
 
     /**
-     * Tính toán % tăng trưởng doanh thu so với tháng trước
+     * Phương thức này (không tham số) sẽ lấy customer hiện tại và gọi phương thức (có tham số) ở trên
+     */
+    @Override
+    public DashboardStatsDTO getDashboardStats() {
+        // Lấy customer hiện tại từ Spring Security
+        Customer currentUser = getCurrentUser();
+        if (currentUser == null) {
+            throw new ResourceNotFoundException("Customer not authenticated or not found");
+        }
+        // Gọi logic chính
+        return getDashboardStats(currentUser.getId());
+    }
+
+
+    /**
+     * Tính toán % tăng trưởng doanh thu so với tháng trước (cho customerId)
      */
     private Double calculateMonthlyGrowth(Integer customerId) {
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfThisMonth = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfThisMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
         LocalDateTime startOfLastMonth = startOfThisMonth.minusMonths(1);
-        LocalDateTime endOfLastMonth = startOfThisMonth;
 
         // Doanh thu tháng này (từ đầu tháng đến hiện tại)
         Double revenueThisMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
-                customerId, startOfThisMonth, LocalDateTime.now());
+                customerId, startOfThisMonth, now);
 
         // Doanh thu tháng trước (trọn vẹn)
         Double revenueLastMonth = billRepo.findTotalRevenueByCustomerIdAndDateRange(
-                customerId, startOfLastMonth, endOfLastMonth);
+                customerId, startOfLastMonth, startOfThisMonth); // (từ đầu tháng trước ĐẾN đầu tháng này)
 
         double thisMonth = (revenueThisMonth != null) ? revenueThisMonth : 0.0;
         double lastMonth = (revenueLastMonth != null) ? revenueLastMonth : 0.0;
@@ -241,7 +256,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         double growth = ((thisMonth - lastMonth) / lastMonth) * 100.0;
-        return Math.round(growth * 100.0) / 100.0;
+        return Math.round(growth * 100.0) / 100.0; // Làm tròn 2 chữ số
     }
 
     /**
@@ -252,12 +267,12 @@ public class CustomerServiceImpl implements CustomerService {
 
         List<DashboardStatsDTO.RevenueData> result = new ArrayList<>();
         LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusDays(days - 1);
+        LocalDate startDate = endDate.minusDays(days - 1); // Lấy đủ 'days' ngày
 
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            String dateStr = date.toString();
+            String dateStr = date.toString(); // Định dạng 'YYYY-MM-DD'
 
-            // Tìm dữ liệu cho ngày này
+            // Tìm dữ liệu cho ngày này (phải khớp định dạng YYYY-MM-DD)
             DashboardStatsDTO.RevenueData found = data.stream()
                     .filter(d -> d.getDate().equals(dateStr))
                     .findFirst()
@@ -266,8 +281,9 @@ public class CustomerServiceImpl implements CustomerService {
             if (found != null) {
                 result.add(found);
             } else {
-                // Thêm ngày với revenue = 0
-                result.add(new DashboardStatsDTO.RevenueData(dateStr, 0.0));
+                // ✅ SỬA LỖI 5 (Logic): Khởi tạo class, không phải interface
+                // Dùng BigDecimal.ZERO thay vì 0.0
+                result.add(new DashboardStatsDTO.RevenueData(dateStr, BigDecimal.ZERO));
             }
         }
 
