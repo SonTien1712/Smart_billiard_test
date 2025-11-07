@@ -119,7 +119,8 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
      */
     @Query("SELECT " +
             "b.tableID.tableName AS table, " +
-            "CAST(SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime))) AS double) / 3600.0 AS hours " + // ✅ SỬA LỖI
+            // Thêm CAST( ... AS double) để chỉ định kiểu dữ liệu cho phép chia
+            "CAST(SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime))) AS double) / 3600.0 AS hours " +
             "FROM Bill b " +
             "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
             "AND b.endTime BETWEEN :startDate AND :endDate " +
