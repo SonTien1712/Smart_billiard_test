@@ -17,7 +17,7 @@ import java.util.Optional;
 @Repository
 public interface BillRepo extends JpaRepository<Bill, Integer> {
 
-    // ... (Các phương thức cũ của bạn không đổi) ...
+    // ... (Các phương thức cũ của bạn từ dòng 19-48 không đổi) ...
     List<Bill> findTop10ByOrderByCreatedDateDesc();
     List<Bill> findTop10ByBillStatusIgnoreCaseOrderByCreatedDateDesc(String billStatus);
     List<Bill> findTop10ByClubID_IdAndBillStatusIgnoreCaseOrderByCreatedDateDesc(Integer clubId, String billStatus);
@@ -95,30 +95,50 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
 
-    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) ====================
+    // ==================== CÁC TRUY VẤN CŨ (TOÀN CỤC) - ĐÃ SỬA LỖI ====================
 
-    @Query("SELECT COALESCE(SUM(b.totalAmount), 0.0) FROM Bill b WHERE b.billDate BETWEEN :startDate AND :endDate AND b.status = 'PAID'")
-    Double findTotalRevenueBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    /**
+     * ✅ SỬA LỖI:
+     * 1. b.totalAmount -> b.finalAmount
+     * 2. b.billDate -> b.endTime (Giả định tính doanh thu khi kết thúc)
+     * 3. b.status -> b.billStatus
+     */
+    @Query("SELECT COALESCE(SUM(b.finalAmount), 0.0) FROM Bill b " +
+            "WHERE b.endTime BETWEEN :startDate AND :endDate " +
+            "AND b.billStatus = 'Paid'")
+    Double findTotalRevenueBetweenDates(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
+    /**
+     * ✅ SỬA LỖI:
+     * 1. b.totalAmount -> b.finalAmount
+     * 2. b.billDate -> b.endTime
+     * 3. b.status -> b.billStatus
+     */
     @Query("SELECT " +
-            "FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') AS date, " +
-            "SUM(b.totalAmount) AS revenue " +
-            "FROM Bill b WHERE b.billDate >= :startDate AND b.status = 'PAID' " +
-            "GROUP BY FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') " +
-            "ORDER BY FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') ASC")
+            "FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') AS date, " +
+            "SUM(b.finalAmount) AS revenue " +
+            "FROM Bill b " +
+            "WHERE b.endTime >= :startDate AND b.billStatus = 'Paid' " +
+            "GROUP BY FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') " +
+            "ORDER BY FUNCTION('DATE_FORMAT', b.endTime, '%Y-%m-%d') ASC")
     List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
 
     /**
-     * ✅ ĐÂY LÀ NƠI SỬA LỖI:
-     * Thay thế 'b.billiardtable' (sai) bằng 'b.tableID' (đúng)
+     * ✅ SỬA LỖI (Đã sửa từ lần trước):
+     * 1. b.billiardtable -> b.tableID
+     * 2. b.billDate -> b.endTime
      */
     @Query("SELECT " +
-            "b.tableID.tableName AS table, " + // ✅ SỬA LỖI
+            "b.tableID.tableName AS table, " +
             "SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime)) / 3600.0) AS hours " +
             "FROM Bill b " +
-            "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " + // ✅ SỬA LỖI
-            "AND b.billDate BETWEEN :startDate AND :endDate " +
-            "GROUP BY b.tableID.tableName") // ✅ SỬA LỖI
-    List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+            "WHERE b.tableID IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
+            "AND b.endTime BETWEEN :startDate AND :endDate " +
+            "GROUP BY b.tableID.tableName")
+    List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
 }
