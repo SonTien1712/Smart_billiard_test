@@ -36,4 +36,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
      */
     @Query("SELECT COUNT(p) FROM Product p WHERE p.clubID.customerID = :customerId")
     Long countByCustomerId(@Param("customerId") Integer customerId);
+
+    Long countByCustomerIdAndIsActive(Integer customerId, Boolean isActive);
 }

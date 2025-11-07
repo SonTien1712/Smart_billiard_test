@@ -162,59 +162,55 @@ public class CustomerServiceImpl implements CustomerService {
      * Dữ liệu được tổng hợp từ TẤT CẢ các clubs thuộc customer này
      */
     @Override
-    @Transactional(readOnly = true)
-    public DashboardStatsDTO getDashboardStats(Integer customerId) {
-        // 1. Đảm bảo customer tồn tại
-        if (!customerRepository.existsById(customerId)) {
-            throw new ResourceNotFoundException("Customer not found with id: " + customerId);
+    public DashboardStatsDTO getDashboardStats() {
+
+        // === 1. Thống kê tổng quan (KPIs) ===
+        // Đếm tổng số bàn từ nghiệp vụ quản lý bàn
+        Long totalTables = billiardTableRepo.count();
+        // Đếm tổng số nhân viên từ nghiệp vụ quản lý nhân viên
+        Long totalEmployees = employeeRepo.count();
+        // Đếm tổng số sản phẩm từ nghiệp vụ quản lý sản phẩm
+        Long totalProducts = productRepository.count();
+        // Đếm số ca đang hoạt động từ nghiệp vụ quản lý ca làm việc
+        Long activeShifts = employeeshiftRepo.countByCheckOutTimeIsNull();
+
+        // === 2. Tính toán Doanh thu và Tăng trưởng ===
+        LocalDateTime now = LocalDateTime.now();
+
+        // Doanh thu tháng này (từ đầu tháng đến hiện tại)
+        LocalDateTime startOfMonth = now.with(TemporalAdjusters.firstDayOfMonth()).with(LocalTime.MIN);
+        Double revenueThisMonth = billRepo.findTotalRevenueBetweenDates(startOfMonth, now);
+
+        // Doanh thu tháng trước (trọn tháng trước)
+        LocalDateTime startOfLastMonth = startOfMonth.minusMonths(1);
+        LocalDateTime endOfLastMonth = startOfMonth.minusNanos(1);
+        Double revenueLastMonth = billRepo.findTotalRevenueBetweenDates(startOfLastMonth, endOfLastMonth);
+
+        // Tính tăng trưởng
+        Double monthlyGrowth = 0.0;
+        if (revenueLastMonth != null && revenueLastMonth > 0) {
+            // Tính % tăng trưởng so với tháng trước
+            monthlyGrowth = ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100.0;
+        } else if (revenueThisMonth != null && revenueThisMonth > 0) {
+            monthlyGrowth = 100.0; // Tăng trưởng 100% nếu tháng trước = 0
         }
 
-        // 2. Tính toán các chỉ số tổng quan
+        // === 3. Dữ liệu Biểu đồ Doanh thu (7 ngày qua) ===
+        LocalDateTime sevenDaysAgo = now.minusDays(7).with(LocalTime.MIN);
+        List<DashboardStatsDTO.RevenueData> revenueData = billRepo.findDailyRevenueSince(sevenDaysAgo);
 
-        // Tổng doanh thu (từ tất cả clubs của customer)
-        Double totalRevenue = billRepo.findTotalRevenueByCustomerId(customerId);
+        // === 4. Dữ liệu Biểu đồ Sử dụng Bàn (Hôm nay) ===
+        LocalDateTime startOfDay = now.with(LocalTime.MIN);
+        List<DashboardStatsDTO.TableUsageData> tableUsageData = billRepo.findTableUsageBetweenDates(startOfDay, now);
 
-        // Tổng số bàn (từ tất cả clubs)
-        Long totalTables = billiardTableRepo.countByCustomerId(customerId);
-
-        // Tổng số nhân viên
-        Long totalEmployees = employeeRepo.countByCustomerId(customerId);
-
-        // Tổng số sản phẩm
-        Long totalProducts = productRepo.countByCustomerId(customerId);
-
-        // Số ca đang hoạt động (có actualStartTime nhưng chưa có actualEndTime)
-        Long activeShifts = employeeshiftRepo.countActiveShiftsByCustomerId(customerId);
-
-        // Tăng trưởng doanh thu theo tháng
-        Double monthlyGrowth = calculateMonthlyGrowth(customerId);
-
-        // 3. Lấy dữ liệu biểu đồ doanh thu (7 ngày gần nhất)
-        LocalDateTime sevenDaysAgo = LocalDate.now().minusDays(6).atStartOfDay();
-        List<DashboardStatsDTO.RevenueData> revenueData =
-                billRepo.findDailyRevenueByCustomerId(customerId, sevenDaysAgo);
-
-        // Điền đủ 7 ngày nếu có ngày không có dữ liệu
-        revenueData = fillMissingDates(revenueData, 7);
-
-        // 4. Lấy dữ liệu sử dụng bàn (hôm nay)
-        LocalDateTime today = LocalDate.now().atStartOfDay();
-        List<DashboardStatsDTO.TableUsageData> tableUsageData =
-                billRepo.findTodayTableUsageByCustomerId(customerId, today);
-
-        // Giới hạn top 5 bàn được sử dụng nhiều nhất
-        if (tableUsageData.size() > 5) {
-            tableUsageData = tableUsageData.subList(0, 5);
-        }
-
-        // 5. Xây dựng DTO trả về
+        // === 5. Xây dựng DTO trả về ===
         return DashboardStatsDTO.builder()
-                .totalRevenue(totalRevenue != null ? totalRevenue : 0.0)
-                .totalTables(totalTables != null ? totalTables : 0L)
-                .totalEmployees(totalEmployees != null ? totalEmployees : 0L)
-                .totalProducts(totalProducts != null ? totalProducts : 0L)
-                .activeShifts(activeShifts != null ? activeShifts : 0L)
+                .totalRevenue(revenueThisMonth) // Tổng doanh thu hiển thị là của tháng này
                 .monthlyGrowth(monthlyGrowth)
+                .totalTables(totalTables)
+                .totalEmployees(totalEmployees)
+                .activeShifts(activeShifts)
+                .totalProducts(totalProducts)
                 .revenueData(revenueData)
                 .tableUsageData(tableUsageData)
                 .build();

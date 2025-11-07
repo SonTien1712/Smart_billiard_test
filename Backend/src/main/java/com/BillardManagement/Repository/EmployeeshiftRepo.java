@@ -28,4 +28,6 @@ public interface EmployeeshiftRepo extends JpaRepository<Employeeshift, Integer>
             "AND s.actualStartTime IS NOT NULL " +
             "AND s.actualEndTime IS NULL")
     Long countActiveShiftsByCustomerId(@Param("customerId") Integer customerId);
+
+    Long countByCheckOutTimeIsNull();
 }

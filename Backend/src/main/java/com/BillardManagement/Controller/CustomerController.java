@@ -56,35 +56,41 @@ public class CustomerController {
      * Lấy thống kê dashboard của customer đang đăng nhập
      * Tự động lấy customerId từ JWT token
      */
-    @GetMapping("/dashboard-stats")
+//    @GetMapping("/dashboard-stats")
+//    public ResponseEntity<DashboardStatsDTO> getDashboardStatistics() {
+//        try {
+//            // Lấy thông tin customer từ authentication context
+//            Customer currentUser = customerService.getCurrentUser();
+//
+//            // Lấy thống kê dashboard
+//            DashboardStatsDTO stats = customerService.getDashboardStats(currentUser.getId());
+//
+//            return ResponseEntity.ok(stats);
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+//                    .body(null);
+//        }
+//    }
+//
+//    /**
+//     * Alternative endpoint: Lấy dashboard stats theo customer ID cụ thể
+//     * (Có thể dùng cho admin hoặc testing)
+//     */
+//    @GetMapping("/{id}/dashboard-stats")
+//    public ResponseEntity<DashboardStatsDTO> getDashboardStatisticsByCustomerId(
+//            @PathVariable Integer id) {
+//        try {
+//            DashboardStatsDTO stats = customerService.getDashboardStats(id);
+//            return ResponseEntity.ok(stats);
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//                    .body(null);
+//        }
+//    }
+
+    @GetMapping("/dashboard-stats") // <-- Endpoint này khớp với /dashboard-stats
     public ResponseEntity<DashboardStatsDTO> getDashboardStatistics() {
-        try {
-            // Lấy thông tin customer từ authentication context
-            Customer currentUser = customerService.getCurrentUser();
-
-            // Lấy thống kê dashboard
-            DashboardStatsDTO stats = customerService.getDashboardStats(currentUser.getId());
-
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(null);
-        }
-    }
-
-    /**
-     * Alternative endpoint: Lấy dashboard stats theo customer ID cụ thể
-     * (Có thể dùng cho admin hoặc testing)
-     */
-    @GetMapping("/{id}/dashboard-stats")
-    public ResponseEntity<DashboardStatsDTO> getDashboardStatisticsByCustomerId(
-            @PathVariable Integer id) {
-        try {
-            DashboardStatsDTO stats = customerService.getDashboardStats(id);
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(null);
-        }
+        DashboardStatsDTO stats = customerService.getDashboardStats();
+        return ResponseEntity.ok(stats);
     }
 }

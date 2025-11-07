@@ -1,5 +1,6 @@
 import { apiClient } from './api';
 import { API_CONFIG } from '../config/api';
+import api from './api';
 
 const USE_MOCK_DATA = false;
 
@@ -7,21 +8,57 @@ export class CustomerService {
 
     // ==================== DASHBOARD ====================
 
-    /**
-     * Get dashboard statistics for current customer
-     */
     async getDashboardStats() {
         try {
             console.log('[API Dashboard] Fetching dashboard stats...');
 
-            const endpoint = '/customers/dashboard-stats';
+            // ✅ ĐÃ SỬA: Trỏ đến đúng endpoint của CustomerController
+            // Endpoint cũ: '/customers/dashboard-stats'
+            // Endpoint mới dựa trên CustomerController.java: '/api/v1/customer/dashboard-stats'
+            // Giả sử apiClient đã xử lý prefix '/api/v1'
+            // Nếu không, bạn cần dùng đường dẫn đầy đủ.
+            // Dựa trên các hàm khác, có vẻ bạn đang dùng prefix.
+            // Chúng ta sẽ dùng endpoint tương đối với prefix của CustomerController.
+
+            // LƯU Ý: Nếu 'apiClient' của bạn tự động thêm '/api/v1',
+            // thì endpoint chỉ cần là '/customer/dashboard-stats'.
+            // Nếu không, nó phải là '/api/v1/customer/dashboard-stats'.
+
+            // *** Giả định an toàn nhất là dùng đường dẫn mà Controller của bạn định nghĩa ***
+            // Bạn đã import 'apiClient', chúng ta sẽ dùng nó.
+
+            // Hãy kiểm tra 'api.js' của bạn.
+            // Nếu 'api.js' đặt baseURL là 'http://localhost:8080/api/v1',
+            // thì endpoint ở đây phải là '/customer/dashboard-stats'.
+
+            // Dựa trên cách bạn gọi:
+            // const response = await api.get('/customer/dashboard-stats');
+            // (từ đoạn code lỗi của bạn ở dưới)
+            // và CustomerController.java của bạn là:
+            // @RequestMapping("/api/v1/customer")
+            // @GetMapping("/dashboard-stats")
+
+            // => Endpoint chính xác để gọi là: '/customer/dashboard-stats'
+            // (Nếu apiClient được cấu hình với baseURL là /api/v1)
+            // Hoặc là '/api/v1/customer/dashboard-stats' (Nếu apiClient gọi từ root)
+
+            // Tôi sẽ sử dụng endpoint mà tôi đã đề xuất ở backend,
+            // vì nó tuân thủ RESTful với prefix của controller.
+
+            // Giả sử 'apiClient' của bạn KHÔNG có prefix /api/v1
+            const endpoint = '/api/v1/customer/dashboard-stats';
+
+            // *** NẾU 'apiClient' CÓ prefix /api/v1, hãy dùng dòng này: ***
+            // const endpoint = '/customer/dashboard-stats';
+
             const data = await apiClient.get(endpoint);
 
             console.log('[API Dashboard] Stats received:', data);
             return data;
         } catch (error) {
             console.error('[API Dashboard] Failed to fetch stats:', error);
-            throw error;
+            // Ném lỗi đã được xử lý (nếu có) hoặc thông báo chung
+            throw error.response?.data || error.message || 'Failed to fetch dashboard stats';
         }
     }
 
@@ -32,6 +69,9 @@ export class CustomerService {
         try {
             console.log('[API Dashboard] Fetching stats for customer:', customerId);
 
+            // ✅ LƯU Ý: Endpoint này có thể cũng cần sửa
+            // Hiện tại: '/customers/${customerId}/dashboard-stats'
+            // Có thể cần: '/api/v1/admin/customer/${customerId}/dashboard-stats' (tùy vào AdminController)
             const endpoint = `/customers/${customerId}/dashboard-stats`;
             const data = await apiClient.get(endpoint);
 
@@ -404,6 +444,11 @@ export class CustomerService {
             return [];
         }
     }
+
+
+
+
 }
 
 export const customerService = new CustomerService();
+

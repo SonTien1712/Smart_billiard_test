@@ -32,4 +32,6 @@ public interface CustomerService {
     Customer getCurrentUser();
 
     DashboardStatsDTO getDashboardStats(Integer customerId);
+
+    DashboardStatsDTO getDashboardStats();
 }

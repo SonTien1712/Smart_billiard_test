@@ -111,4 +111,32 @@ public interface BillRepo extends JpaRepository<Bill, Integer> {
     Long countTodayBillsByCustomerId(
             @Param("customerId") Integer customerId,
             @Param("today") LocalDateTime today);
+
+    /**
+     * Tính tổng doanh thu của các hóa đơn ĐÃ THANH TOÁN trong một khoảng thời gian.
+     */
+    @Query("SELECT COALESCE(SUM(b.totalAmount), 0.0) FROM Bill b WHERE b.billDate BETWEEN :startDate AND :endDate AND b.status = 'PAID'")
+    Double findTotalRevenueBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Lấy dữ liệu doanh thu hàng ngày (cho biểu đồ) kể từ một ngày nhất định.
+     * Sử dụng JPA constructor expression với DTO tĩnh lồng bên trong DashboardStatsDTO.
+     */
+    @Query("SELECT new com.BillardManagement.DTO.Response.DashboardStatsDTO$RevenueData(FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d'), SUM(b.totalAmount)) " +
+            "FROM Bill b WHERE b.billDate >= :startDate AND b.status = 'PAID' " +
+            "GROUP BY FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') " +
+            "ORDER BY FUNCTION('DATE_FORMAT', b.billDate, '%Y-%m-%d') ASC")
+    List<DashboardStatsDTO.RevenueData> findDailyRevenueSince(@Param("startDate") LocalDateTime startDate);
+
+    /**
+     * Lấy tổng số giờ chơi (dạng thập phân) theo từng bàn trong một khoảng thời gian.
+     * Tính toán dựa trên endTime và startTime.
+     */
+    @Query("SELECT new com.BillardManagement.DTO.Response.DashboardStatsDTO$TableUsageData(b.billiardtable.tableName, SUM(FUNCTION('TIME_TO_SEC', FUNCTION('TIMEDIFF', b.endTime, b.startTime)) / 3600.0)) " +
+            "FROM Bill b " +
+            "WHERE b.billiardtable IS NOT NULL AND b.endTime IS NOT NULL AND b.startTime IS NOT NULL " +
+            "AND b.billDate BETWEEN :startDate AND :endDate " +
+            "GROUP BY b.billiardtable.tableName")
+    List<DashboardStatsDTO.TableUsageData> findTableUsageBetweenDates(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
 }

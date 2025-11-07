@@ -1,44 +1,47 @@
 package com.BillardManagement.DTO.Response;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 public class DashboardStatsDTO {
 
-    // Tổng quan thống kê
-    private Double totalRevenue;
+    // Các chỉ số KPI Cards
+    private BigDecimal todayRevenue;
+    private Long todayBills;
     private Long totalTables;
     private Long totalEmployees;
     private Long activeShifts;
     private Long totalProducts;
-    private Double monthlyGrowth;
+    private Double monthlyGrowth; // % tăng trưởng so với tháng trước
 
-    // Dữ liệu biểu đồ
+    // Dữ liệu cho biểu đồ (Sử dụng DTOs được định nghĩa trong BillRepo query)
     private List<RevenueData> revenueData;
     private List<TableUsageData> tableUsageData;
 
-    // ✅ CRITICAL: Must be STATIC for JPA constructor expressions
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class RevenueData {
-        private String date;
-        private Double revenue;
+    /**
+     * Interface cho Spring Data Projection khớp với query:
+     * findDailyRevenueByCustomerId trong BillRepo
+     */
+    public interface RevenueData {
+        String getDate();
+        BigDecimal getRevenue();
     }
 
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class TableUsageData {
-        private String table;
-        private Double hours;
+    /**
+     * Interface cho Spring Data Projection khớp với query:
+     * findTodayTableUsageByCustomerId trong BillRepo
+     */
+    public interface TableUsageData {
+        String getTable();
+        Double getHours();
     }
 }
